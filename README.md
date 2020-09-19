@@ -4,6 +4,8 @@ ColorJSON: The Fast Color JSON Marshaller for Go
 What is this?
 -------------
 
+Clone from [original](http://github.com/TylerBrock/colorjson).
+
 This package is based heavily on hokaccha/go-prettyjson but has some noticible differences:
  - Over twice as fast (recursive descent serialization uses buffer instead of string concatenation)
    ```
@@ -19,7 +21,7 @@ Installation
 ------------
 
 ```sh
-go get -u github.com/TylerBrock/colorjson
+go get -u github.com/nmccready/colorjson
 ```
 
 Usage
@@ -28,7 +30,7 @@ Usage
 Setup
 
 ```go
-import "github.com/TylerBrock/colorjson"
+import "github.com/nmccready/colorjson"
 
 str := `{
   "str": "foo",

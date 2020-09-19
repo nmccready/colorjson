@@ -1,10 +1,23 @@
 package colorjson_test
 
-import "testing"
-import "github.com/TylerBrock/colorjson"
-import "github.com/hokaccha/go-prettyjson"
+import (
+	"testing"
 
-func benchmarkMarshall(i int, b *testing.B) {
+	faith "github.com/fatih/color"
+	"github.com/hokaccha/go-prettyjson"
+	"github.com/nmccready/colorjson"
+)
+
+var customFormater *colorjson.Formatter = makeCustom()
+
+func makeCustom() *colorjson.Formatter {
+	formatter := colorjson.NewFormatter()
+	formatter.Indent = 2
+	formatter.KeyMapColors["custom"] = faith.New(faith.FgMagenta)
+	return formatter
+}
+
+func BenchmarkMarshall(b *testing.B) {
 	simpleMap := make(map[string]interface{})
 	simpleMap["a"] = 1
 	simpleMap["b"] = "bee"
@@ -13,11 +26,12 @@ func benchmarkMarshall(i int, b *testing.B) {
 
 	// run the Fib function b.N times
 	for n := 0; n < b.N; n++ {
+		//nolint errcheck
 		colorjson.Marshal(simpleMap)
 	}
 }
 
-func benchmarkPrettyJSON(i int, b *testing.B) {
+func BenchmarkPrettyJSON(b *testing.B) {
 	simpleMap := make(map[string]interface{})
 	simpleMap["a"] = 1
 	simpleMap["b"] = "bee"
@@ -26,11 +40,22 @@ func benchmarkPrettyJSON(i int, b *testing.B) {
 
 	// run the Fib function b.N times
 	for n := 0; n < b.N; n++ {
+		//nolint errcheck
 		prettyjson.Marshal(simpleMap)
 	}
 }
 
-func BenchmarkMarshall(b *testing.B)     { benchmarkMarshall(100, b) }
-func BenchmarkMarshall1k(b *testing.B)   { benchmarkMarshall(1000, b) }
-func BenchmarkPrettyJSON(b *testing.B)   { benchmarkPrettyJSON(100, b) }
-func BenchmarkPrettyJSON1k(b *testing.B) { benchmarkPrettyJSON(1000, b) }
+func BenchmarkPrettyCustomKeyJSON(b *testing.B) {
+	simpleMap := make(map[string]interface{})
+	simpleMap["a"] = 1
+	simpleMap["b"] = "bee"
+	simpleMap["c"] = [3]float64{1, 2, 3}
+	simpleMap["d"] = [3]string{"one", "two", "three"}
+	simpleMap["custom"] = "custom"
+
+	// run the Fib function b.N times
+	for n := 0; n < b.N; n++ {
+		//nolint errcheck
+		customFormater.Marshal(simpleMap)
+	}
+}

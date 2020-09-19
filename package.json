@@ -1,0 +1,21 @@
+{
+  "name": "@znemz/colorjson",
+  "private": true,
+  "version": "0.0.1",
+  "description": "lambda go sample, package.json is for versioning only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nmccready/colorjson.git"
+  },
+  "keywords": [
+    "go",
+    "debug"
+  ],
+  "originalAuthor": "Tyler Brock",
+  "author": "Nicholas McCready",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nmccready/colorjson/issues"
+  },
+  "homepage": "https://github.com/nmccready/colorjson#readme"
+}

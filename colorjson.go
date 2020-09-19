@@ -31,7 +31,9 @@ type Formatter struct {
 	StringMaxLength int
 	Indent          int
 	DisabledColor   bool
+	HTMLEscape      bool
 	RawStrings      bool
+	KeyMapColors    map[string]*color.Color
 }
 
 func NewFormatter() *Formatter {
@@ -45,17 +47,24 @@ func NewFormatter() *Formatter {
 		DisabledColor:   false,
 		Indent:          0,
 		RawStrings:      false,
+		KeyMapColors:    map[string]*color.Color{},
 	}
 }
 
-func (f *Formatter) sprintfColor(c *color.Color, format string, args ...interface{}) string {
+func (f *Formatter) sprintfColor(key string, c *color.Color, format string, args ...interface{}) string {
+	if f.KeyMapColors[key] != nil {
+		c = f.KeyMapColors[key]
+	}
 	if f.DisabledColor || c == nil {
 		return fmt.Sprintf(format, args...)
 	}
 	return c.SprintfFunc()(format, args...)
 }
 
-func (f *Formatter) sprintColor(c *color.Color, s string) string {
+func (f *Formatter) sprintColor(key string, c *color.Color, s string) string {
+	if f.KeyMapColors[key] != nil {
+		c = f.KeyMapColors[key]
+	}
 	if f.DisabledColor || c == nil {
 		return fmt.Sprint(s)
 	}
@@ -76,7 +85,7 @@ func (f *Formatter) writeObjSep(buf *bytes.Buffer) {
 
 func (f *Formatter) Marshal(jsonObj interface{}) ([]byte, error) {
 	buffer := bytes.Buffer{}
-	f.marshalValue(jsonObj, &buffer, initialDepth)
+	f.marshalValue("", jsonObj, &buffer, initialDepth)
 	return buffer.Bytes(), nil
 }
 
@@ -101,7 +110,7 @@ func (f *Formatter) marshalMap(m map[string]interface{}, buf *bytes.Buffer, dept
 	for _, key := range keys {
 		f.writeIndent(buf, depth+1)
 		buf.WriteString(f.KeyColor.Sprintf("\"%s\": ", key))
-		f.marshalValue(m[key], buf, depth+1)
+		f.marshalValue(key, m[key], buf, depth+1)
 		remaining--
 		if remaining != 0 {
 			buf.WriteString(valueSep)
@@ -112,7 +121,7 @@ func (f *Formatter) marshalMap(m map[string]interface{}, buf *bytes.Buffer, dept
 	buf.WriteString(endMap)
 }
 
-func (f *Formatter) marshalArray(a []interface{}, buf *bytes.Buffer, depth int) {
+func (f *Formatter) marshalArray(key string, a []interface{}, buf *bytes.Buffer, depth int) {
 	if len(a) == 0 {
 		buf.WriteString(emptyArray)
 		return
@@ -123,7 +132,7 @@ func (f *Formatter) marshalArray(a []interface{}, buf *bytes.Buffer, depth int) 
 
 	for i, v := range a {
 		f.writeIndent(buf, depth+1)
-		f.marshalValue(v, buf, depth+1)
+		f.marshalValue(key, v, buf, depth+1)
 		if i < len(a)-1 {
 			buf.WriteString(valueSep)
 		}
@@ -133,36 +142,47 @@ func (f *Formatter) marshalArray(a []interface{}, buf *bytes.Buffer, depth int) 
 	buf.WriteString(endArray)
 }
 
-func (f *Formatter) marshalValue(val interface{}, buf *bytes.Buffer, depth int) {
+func (f *Formatter) marshalValue(key string, val interface{}, buf *bytes.Buffer, depth int) {
 	switch v := val.(type) {
 	case map[string]interface{}:
 		f.marshalMap(v, buf, depth)
 	case []interface{}:
-		f.marshalArray(v, buf, depth)
+		f.marshalArray(key, v, buf, depth)
 	case string:
-		f.marshalString(v, buf)
+		f.marshalString(key, v, buf)
 	case float64:
-		buf.WriteString(f.sprintColor(f.NumberColor, strconv.FormatFloat(v, 'f', -1, 64)))
+		buf.WriteString(f.sprintColor(key, f.NumberColor, strconv.FormatFloat(v, 'f', -1, 64)))
 	case bool:
-		buf.WriteString(f.sprintColor(f.BoolColor, (strconv.FormatBool(v))))
+		buf.WriteString(f.sprintColor(key, f.BoolColor, (strconv.FormatBool(v))))
 	case nil:
-		buf.WriteString(f.sprintColor(f.NullColor, null))
+		buf.WriteString(f.sprintColor(key, f.NullColor, null))
 	case json.Number:
-		buf.WriteString(f.sprintColor(f.NumberColor, v.String()))
+		buf.WriteString(f.sprintColor(key, f.NumberColor, v.String()))
 	}
 }
 
-func (f *Formatter) marshalString(str string, buf *bytes.Buffer) {
+func (f *Formatter) marshalString(key string, str string, buf *bytes.Buffer) {
 	if !f.RawStrings {
-		strBytes, _ := json.Marshal(str)
-		str = string(strBytes)
+		// strBytes, _ := json.Marshal(str)
+		// str = string(strBytes)
+		b := &bytes.Buffer{}
+
+		encoder := json.NewEncoder(b)
+		encoder.SetEscapeHTML(f.HTMLEscape)
+		err := encoder.Encode(interface{}(str))
+		if err != nil {
+			str = "colorjson: error encoding string"
+		} else {
+			str = strings.Replace(b.String(), "\n", "", 1)
+		}
 	}
 
 	if f.StringMaxLength != 0 && len(str) >= f.StringMaxLength {
 		str = fmt.Sprintf("%s...", str[0:f.StringMaxLength])
 	}
 
-	buf.WriteString(f.sprintColor(f.StringColor, str))
+	// buf.WriteString(str)
+	buf.WriteString(f.sprintColor(key, f.StringColor, str))
 }
 
 // Marshal JSON data with default options
