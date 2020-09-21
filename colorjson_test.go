@@ -1,6 +1,7 @@
 package colorjson_test
 
 import (
+	"errors"
 	"testing"
 
 	faith "github.com/fatih/color"
@@ -30,6 +31,17 @@ func TestSanity(t *testing.T) {
 
 	str, _ := f.MarshalString(simpleMap)
 	assert.Equal(t, `{ "a": 1, "b": "bee", "c": [ 1, 2, 3 ], "d": [ "one", "two", "three" ] }`, str)
+}
+
+func TestErrorAsString(t *testing.T) {
+	simpleMap := colorjson.Object{}
+	simpleMap["error"] = errors.New("junk")
+
+	f := colorjson.NewFormatter()
+	f.DisabledColor = true
+
+	str, _ := f.MarshalString(simpleMap)
+	assert.Equal(t, `{ "error": "junk" }`, str)
 }
 
 func BenchmarkMarshall(b *testing.B) {

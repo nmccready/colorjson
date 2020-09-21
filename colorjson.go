@@ -259,6 +259,8 @@ func (f *Formatter) marshalValue(key string, val interface{}, buf *bytes.Buffer,
 		f.marshalBoolArray(key, v, buf, depth)
 	case string:
 		f.marshalString(key, v, buf)
+	case error:
+		f.marshalString(key, v.Error(), buf)
 	case float64:
 		buf.WriteString(f.sprintColor(key, f.NumberColor, strconv.FormatFloat(v, 'f', -1, 64)))
 	case bool:
