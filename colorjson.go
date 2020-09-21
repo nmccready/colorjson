@@ -51,6 +51,7 @@ func NewFormatter() *Formatter {
 	}
 }
 
+//nolint unused
 func (f *Formatter) sprintfColor(key string, c *color.Color, format string, args ...interface{}) string {
 	if f.KeyMapColors[key] != nil {
 		c = f.KeyMapColors[key]
