@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,6 +23,10 @@ const endArray = "]"
 
 const emptyMap = startMap + endMap
 const emptyArray = startArray + endArray
+
+var stripColorsRegEx = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+type Object map[string]interface{}
 
 type Formatter struct {
 	KeyColor        *color.Color
@@ -87,7 +93,15 @@ func (f *Formatter) writeObjSep(buf *bytes.Buffer) {
 func (f *Formatter) Marshal(jsonObj interface{}) ([]byte, error) {
 	buffer := bytes.Buffer{}
 	f.marshalValue("", jsonObj, &buffer, initialDepth)
+	if f.DisabledColor {
+		return stripColorsRegEx.ReplaceAll(buffer.Bytes(), []byte("")), nil
+	}
 	return buffer.Bytes(), nil
+}
+
+func (f *Formatter) MarshalString(jsonObj interface{}) (string, error) {
+	b, err := f.Marshal(jsonObj)
+	return string(b), err
 }
 
 func (f *Formatter) marshalMap(m map[string]interface{}, buf *bytes.Buffer, depth int) {
@@ -143,12 +157,106 @@ func (f *Formatter) marshalArray(key string, a []interface{}, buf *bytes.Buffer,
 	buf.WriteString(endArray)
 }
 
+func (f *Formatter) marshalIntArray(key string, a []int, buf *bytes.Buffer, depth int) {
+	if len(a) == 0 {
+		buf.WriteString(emptyArray)
+		return
+	}
+
+	buf.WriteString(startArray)
+	f.writeObjSep(buf)
+
+	for i, v := range a {
+		f.writeIndent(buf, depth+1)
+		f.marshalValue(key, v, buf, depth+1)
+		if i < len(a)-1 {
+			buf.WriteString(valueSep)
+		}
+		f.writeObjSep(buf)
+	}
+	f.writeIndent(buf, depth)
+	buf.WriteString(endArray)
+}
+
+func (f *Formatter) marshalFloatArray(key string, a []float64, buf *bytes.Buffer, depth int) {
+	if len(a) == 0 {
+		buf.WriteString(emptyArray)
+		return
+	}
+
+	buf.WriteString(startArray)
+	f.writeObjSep(buf)
+
+	for i, v := range a {
+		f.writeIndent(buf, depth+1)
+		f.marshalValue(key, v, buf, depth+1)
+		if i < len(a)-1 {
+			buf.WriteString(valueSep)
+		}
+		f.writeObjSep(buf)
+	}
+	f.writeIndent(buf, depth)
+	buf.WriteString(endArray)
+}
+
+func (f *Formatter) marshalBoolArray(key string, a []bool, buf *bytes.Buffer, depth int) {
+	if len(a) == 0 {
+		buf.WriteString(emptyArray)
+		return
+	}
+
+	buf.WriteString(startArray)
+	f.writeObjSep(buf)
+
+	for i, v := range a {
+		f.writeIndent(buf, depth+1)
+		f.marshalValue(key, v, buf, depth+1)
+		if i < len(a)-1 {
+			buf.WriteString(valueSep)
+		}
+		f.writeObjSep(buf)
+	}
+	f.writeIndent(buf, depth)
+	buf.WriteString(endArray)
+}
+
+func (f *Formatter) marshalStringArray(key string, a []string, buf *bytes.Buffer, depth int) {
+	if len(a) == 0 {
+		buf.WriteString(emptyArray)
+		return
+	}
+
+	buf.WriteString(startArray)
+	f.writeObjSep(buf)
+
+	for i, v := range a {
+		f.writeIndent(buf, depth+1)
+		f.marshalValue(key, v, buf, depth+1)
+		if i < len(a)-1 {
+			buf.WriteString(valueSep)
+		}
+		f.writeObjSep(buf)
+	}
+	f.writeIndent(buf, depth)
+	buf.WriteString(endArray)
+}
+
 func (f *Formatter) marshalValue(key string, val interface{}, buf *bytes.Buffer, depth int) {
 	switch v := val.(type) {
+	case Object:
+		f.marshalMap(v, buf, depth)
 	case map[string]interface{}:
 		f.marshalMap(v, buf, depth)
 	case []interface{}:
 		f.marshalArray(key, v, buf, depth)
+	case []int:
+		f.marshalIntArray(key, v, buf, depth)
+	case []float64:
+		f.marshalFloatArray(key, v, buf, depth)
+	case []string:
+		f.marshalStringArray(key, v, buf, depth)
+	case []bool:
+		f.marshalBoolArray(key, v, buf, depth)
 	case string:
 		f.marshalString(key, v, buf)
 	case float64:
@@ -159,13 +267,16 @@ func (f *Formatter) marshalValue(key string, val interface{}, buf *bytes.Buffer,
 		buf.WriteString(f.sprintColor(key, f.NullColor, null))
 	case json.Number:
 		buf.WriteString(f.sprintColor(key, f.NumberColor, v.String()))
+	case int:
+		buf.WriteString(f.sprintColor(key, f.NumberColor, strconv.Itoa(v)))
+	default:
+		//nolint lll
+		fmt.Printf("colorjson error: unknown type of " + reflect.TypeOf(v).String() + ". If this an object cast as Object or []interface{}\n")
 	}
 }
 
 func (f *Formatter) marshalString(key string, str string, buf *bytes.Buffer) {
 	if !f.RawStrings {
-		// strBytes, _ := json.Marshal(str)
-		// str = string(strBytes)
 		b := &bytes.Buffer{}
 
 		encoder := json.NewEncoder(b)

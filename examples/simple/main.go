@@ -3,7 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/TylerBrock/colorjson"
+
+	"github.com/nmccready/colorjson"
 )
 
 func main() {
