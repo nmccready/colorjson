@@ -3,6 +3,7 @@ package colorjson
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -273,7 +274,7 @@ func (f *Formatter) marshalValue(key string, val interface{}, buf *bytes.Buffer,
 		buf.WriteString(f.sprintColor(key, f.NumberColor, strconv.Itoa(v)))
 	default:
 		//nolint lll
-		fmt.Printf("colorjson error: unknown type of " + reflect.TypeOf(v).String() + ". If this an object cast as Object or []interface{}\n")
+		panic(errors.New(fmt.Sprintf("colorjson error: unknown type of " + reflect.TypeOf(v).String() + ". If this an object cast as Object or []interface{}\n")))
 	}
 }
 
